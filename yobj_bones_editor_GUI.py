@@ -7,7 +7,7 @@ import shutil
 bones = []
 bones_offset = []
 bones_name = []
-bones_parrent = []
+bones_parent = []
 read_bones_offset = 0
 bones_count = 0
 current_file_path = None
@@ -23,11 +23,11 @@ def create_backup(file_path):
 
 # Fungsi membaca bones dari file
 def bones_list(file_path):
-    global bones, bones_offset, bones_name, bones_parrent, read_bones_offset, bones_count
+    global bones, bones_offset, bones_name, bones_parent, read_bones_offset, bones_count
     bones.clear()
     bones_offset.clear()
     bones_name.clear()
-    bones_parrent.clear()
+    bones_parent.clear()
 
     try:
         with open(file_path, "r+b") as f:
@@ -43,7 +43,7 @@ def bones_list(file_path):
                 bones_name.append(pointer)
                 f.read(32)
                 pointer = struct.unpack('<i', f.read(4))[0]
-                bones_parrent.append(pointer)
+                bones_parent.append(pointer)
                 f.seek(-52, 1)
                 pointer = f.read(80)
                 bones.append(pointer)
@@ -56,7 +56,7 @@ def bones_list(file_path):
     for i in range(bones_count):
         name = bones_name[i]
         offset = bones_offset[i]
-        parent = bones_parrent[i]
+        parent = bones_parent[i]
         parent_name = "none" if parent == -1 else bones_name[parent]
         result.append(f"Index {i}, Name {name}, Offset {offset}, Parent {parent} ({parent_name})")
     return result
@@ -86,21 +86,21 @@ def rename_bones(file_path, index, new_name):
             f.write(padded_name)
         bones_name[index] = new_name
         bones_listbox.delete(index)
-        bones_listbox.insert(index, f"Index {index}, Name {new_name}, Offset {bones_offset[index]}, Parent {bones_parrent[index]} (none)")
+        bones_listbox.insert(index, f"Index {index}, Name {new_name}, Offset {bones_offset[index]}, Parent {bones_parent[index]} (none)")
         messagebox.showinfo("Success", f"Bone renamed successfully to '{new_name}'!")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to rename bone: {e}")
 
 # Fungsi Change Parent
 def change_parent(file_path, index, new_parent):
-    global bones_parrent
+    global bones_parent
     create_backup(file_path)  # Backup dibuat di sini
 
     try:
         with open(file_path, "r+b") as f:
             f.seek(bones_offset[index] + 48)
             f.write(struct.pack('<i', new_parent))
-        bones_parrent[index] = new_parent
+        bones_parent[index] = new_parent
         bones_listbox.delete(index)
         parent_name = "none" if new_parent == -1 else bones_name[new_parent]
         bones_listbox.insert(index, f"Index {index}, Name {bones_name[index]}, Offset {bones_offset[index]}, Parent {new_parent} ({parent_name})")
@@ -172,9 +172,14 @@ def open_change_parent_window():
         parent_window.destroy()
 
     parent_window.protocol("WM_DELETE_WINDOW", close_parent_window)
-
-    tk.Label(parent_window, text=f"Bone: {bones_name[index]}").pack(pady=5)
-    tk.Label(parent_window, text="Select New Parent (or None):").pack(pady=5)
+    parent=bones_parent[index]
+    parent_name="none"
+    if parent != -1:
+        parent_name=bones_name[parent]
+        pass
+    tk.Label(parent_window, text=f"Bone: {bones_name[index]}").pack(pady=1)
+    tk.Label(parent_window, text=f"Old parent: {parent} ({parent_name})").pack(pady=1)
+    tk.Label(parent_window, text="Select New Parent (or None):").pack(pady=1)
 
     parent_listbox = tk.Listbox(parent_window, height=10)
     parent_listbox.pack(pady=5)
