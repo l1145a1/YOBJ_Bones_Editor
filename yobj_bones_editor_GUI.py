@@ -164,7 +164,7 @@ def open_change_parent_window():
     # Jendela Change Parent
     parent_window = tk.Toplevel(root)
     parent_window.title("Change Parent")
-    parent_window.geometry("300x300")
+    parent_window.geometry("300x320")
     root.attributes("-disabled", True)  # Freeze main window
 
     def close_parent_window():
@@ -172,11 +172,10 @@ def open_change_parent_window():
         parent_window.destroy()
 
     parent_window.protocol("WM_DELETE_WINDOW", close_parent_window)
-    parent=bones_parent[index]
-    parent_name="none"
-    if parent != -1:
-        parent_name=bones_name[parent]
-        pass
+
+    parent = bones_parent[index]
+    parent_name = "none" if parent == -1 else bones_name[parent]
+
     tk.Label(parent_window, text=f"Bone: {bones_name[index]}").pack(pady=1)
     tk.Label(parent_window, text=f"Old parent: {parent} ({parent_name})").pack(pady=1)
     tk.Label(parent_window, text="Select New Parent (or None):").pack(pady=1)
@@ -191,20 +190,36 @@ def open_change_parent_window():
     for i, name in enumerate(bones_name):
         parent_listbox.insert(tk.END, f"{i}: {name}")
 
+    # Entry box untuk input angka manual
+    manual_entry = tk.Entry(parent_window)
+    manual_entry.pack(pady=5)
+
+    # Fungsi untuk sinkronisasi Entry dengan Listbox
+    def sync_entry_with_listbox(event):
+        selection = parent_listbox.curselection()
+        if selection:
+            manual_entry.delete(0, tk.END)
+            selected_parent = selection[0] - 1  # Subtract 1 for "None (-1)"
+            manual_entry.insert(0, str(selected_parent))
+
+    parent_listbox.bind("<<ListboxSelect>>", sync_entry_with_listbox)
+
     def save_new_parent():
         try:
-            selection = parent_listbox.curselection()
-            if not selection:
-                raise ValueError("No parent selected!")
-            selected_parent = selection[0] - 1  # Subtract 1 to account for the "None" entry at the top
-            if selected_parent < -1 or selected_parent >= bones_count:
+            # Ambil nilai dari Entry box
+            new_parent = int(manual_entry.get())
+            if new_parent < -1 or new_parent >= bones_count:
                 raise ValueError("Invalid parent index!")
-            change_parent(current_file_path, index, selected_parent)
+
+            change_parent(current_file_path, index, new_parent)
             close_parent_window()
+        except ValueError as ve:
+            messagebox.showerror("Error", str(ve))
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
     tk.Button(parent_window, text="Save", command=save_new_parent).pack(pady=10)
+
 
 # GUI
 root = tk.Tk()
